@@ -20,6 +20,10 @@ namespace QuanLySinhVien
             txtTimKiem.KeyDown += txtTimKiem_KeyDown;
 
             filterLop = filterClass;
+
+            if (!string.IsNullOrEmpty(filterLop))
+                this.Text = "Danh sách sinh viên lớp " + filterLop;
+
             LoadLopHocCombo();
             LoadData();
         }
