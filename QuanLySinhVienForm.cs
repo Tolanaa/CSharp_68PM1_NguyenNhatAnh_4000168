@@ -17,6 +17,7 @@ namespace QuanLySinhVien
             InitializeComponent();
 
             dgvSinhVien.CellClick += dgvSinhVien_CellClick;
+            txtTimKiem.KeyDown += txtTimKiem_KeyDown;
 
             filterLop = filterClass;
             LoadLopHocCombo();
@@ -135,7 +136,7 @@ namespace QuanLySinhVien
             catch (Exception ex) { MessageBox.Show("Lỗi: " + ex.Message); }
         }
 
-        private void btnSua_Click(object sender, EventArgs e)
+        private void btnSua_Click(object sender, EventArgs e)  //nút sửa sinh viên
         {
             if (string.IsNullOrEmpty(txtMaSV.Text))
             {
@@ -148,10 +149,12 @@ namespace QuanLySinhVien
                 MessageBox.Show("Sửa thành công!");
                 LoadData();
             }
-            catch (Exception ex) { MessageBox.Show("Lỗi: " + ex.Message); }
+            catch (Exception ex) { MessageBox.Show("Lỗi: " + ex.Message); } 
         }
 
-        private void btnXoa_Click(object sender, EventArgs e)
+        // cho đến đây là hết ạ hẹ hẹ, em lỡ làm trước r nên h em thêm cmt thui ạ
+
+        private void btnXoa_Click(object sender, EventArgs e)  // nút xóa sinh viên
         {
             if (string.IsNullOrEmpty(txtMaSV.Text))
             {
@@ -171,6 +174,7 @@ namespace QuanLySinhVien
             }
         }
 
+        //ở đây e cx xog r ạ
         private void btnLamMoi_Click(object sender, EventArgs e)
         {
             ClearForm();
@@ -188,9 +192,28 @@ namespace QuanLySinhVien
             LoadData();
         }
 
+        private void txtTimKiem_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                searchKeyword = txtTimKiem.Text.Trim();
+                currentPage = 1;
+                LoadData();
+            }
+        }
+
         private void btnFirst_Click(object sender, EventArgs e) { currentPage = 1; LoadData(); }
         private void btnPrev_Click(object sender, EventArgs e) { if (currentPage > 1) { currentPage--; LoadData(); } }
-        private void btnNext_Click(object sender, EventArgs e) { currentPage++; LoadData(); }
+        private void btnNext_Click(object sender, EventArgs e)
+        {
+            int totalPages = Math.Max(1, (int)Math.Ceiling((double)_data.Count / pageSize));
+
+            if (currentPage < totalPages)
+            {
+                currentPage++;
+                LoadData();
+            }
+        }
         private void btnLast_Click(object sender, EventArgs e)
         {
             currentPage = Math.Max(1, (int)Math.Ceiling((double)_data.Count / pageSize));

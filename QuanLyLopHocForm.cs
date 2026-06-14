@@ -143,6 +143,8 @@ namespace QuanLySinhVien
             frm.Show();
         }
 
+
+
         private void btnFirst_Click(object sender, EventArgs e) { currentPage = 1; LoadData(); }
         private void btnPrev_Click(object sender, EventArgs e) { if (currentPage > 1) { currentPage--; LoadData(); } }
         private void btnNext_Click(object sender, EventArgs e) { currentPage++; LoadData(); }
