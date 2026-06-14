@@ -14,9 +14,11 @@ namespace QuanLySinhVien
         public QuanLyLopHocForm()
         {
             InitializeComponent();
+
+            dgvLopHoc.CellClick += dgvLopHoc_CellClick;
+
             LoadData();
         }
-
         private void LoadData()
         {
             _data = DatabaseHelper.GetAllLop(searchKeyword);
@@ -49,6 +51,18 @@ namespace QuanLySinhVien
             txtMaLop.Text = "";
             txtTenLop.Text = "";
             txtGhiChu.Text = "";
+        }
+
+        private void dgvLopHoc_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
+
+            DataGridViewRow row = dgvLopHoc.Rows[e.RowIndex];
+
+            txtMaID.Text = row.Cells["Id"].Value != null ? row.Cells["Id"].Value.ToString() : "";
+            txtMaLop.Text = row.Cells["Malop"].Value != null ? row.Cells["Malop"].Value.ToString() : "";
+            txtTenLop.Text = row.Cells["Tenlop"].Value != null ? row.Cells["Tenlop"].Value.ToString() : "";
+            txtGhiChu.Text = row.Cells["Ghichu"].Value != null ? row.Cells["Ghichu"].Value.ToString() : "";
         }
 
         private void dgvLopHoc_SelectionChanged(object sender, EventArgs e)
@@ -147,7 +161,16 @@ namespace QuanLySinhVien
 
         private void btnFirst_Click(object sender, EventArgs e) { currentPage = 1; LoadData(); }
         private void btnPrev_Click(object sender, EventArgs e) { if (currentPage > 1) { currentPage--; LoadData(); } }
-        private void btnNext_Click(object sender, EventArgs e) { currentPage++; LoadData(); }
+        private void btnNext_Click(object sender, EventArgs e)
+        {
+            int totalPages = Math.Max(1, (int)Math.Ceiling((double)_data.Count / pageSize));
+
+            if (currentPage < totalPages)
+            {
+                currentPage++;
+                LoadData();
+            }
+        }
         private void btnLast_Click(object sender, EventArgs e)
         {
             currentPage = Math.Max(1, (int)Math.Ceiling((double)_data.Count / pageSize));
