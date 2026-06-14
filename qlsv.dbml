@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Database Name="qlsv" Class="Qlsv" xmlns="http://schemas.microsoft.com/linqtosql/dbml/2007">
+  <Table Name="dbo.tbl_lophoc" Member="Tbl_lophoc">
+    <Type Name="Tbl_lophoc">
+      <Column Name="id" Member="Id" Type="System.Int32" DbType="Int NOT NULL IDENTITY" IsPrimaryKey="true" IsDbGenerated="true" CanBeNull="false" />
+      <Column Name="malop" Member="Malop" Type="System.String" DbType="VarChar(20)" CanBeNull="true" />
+      <Column Name="tenlop" Member="Tenlop" Type="System.String" DbType="NVarChar(100)" CanBeNull="true" />
+      <Column Name="ghichu" Member="Ghichu" Type="System.String" DbType="NVarChar(255)" CanBeNull="true" />
+      <Association Name="FK_SinhVien_LopHoc" Member="Tbl_sinhviens" ThisKey="Malop" OtherKey="Malop" Type="Tbl_sinhviens" DeleteRule="NO ACTION" />
+    </Type>
+  </Table>
+  <Table Name="dbo.tbl_sinhviens" Member="Tbl_sinhviens">
+    <Type Name="Tbl_sinhviens">
+      <Column Name="id" Member="Id" Type="System.Int32" DbType="Int NOT NULL" IsPrimaryKey="true" CanBeNull="false" />
+      <Column Name="hoten" Member="Hoten" Type="System.String" DbType="NVarChar(100)" CanBeNull="true" />
+      <Column Name="gioitinh" Member="Gioitinh" Type="System.String" DbType="NVarChar(10)" CanBeNull="true" />
+      <Column Name="ngaysinh" Member="Ngaysinh" Type="System.DateTime" DbType="Date" CanBeNull="true" />
+      <Column Name="malop" Member="Malop" Type="System.String" DbType="VarChar(20)" CanBeNull="true" />
+      <Association Name="FK_SinhVien_LopHoc" Member="Tbl_lophoc" ThisKey="Malop" OtherKey="Malop" Type="Tbl_lophoc" IsForeignKey="true" />
+    </Type>
+  </Table>
+</Database>

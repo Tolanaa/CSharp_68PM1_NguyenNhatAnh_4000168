@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Data;
-using System.Data.SQLite;
-using System.Drawing;
+using System.Collections.Generic;
 using System.Windows.Forms;
 
 namespace QuanLySinhVien
@@ -10,8 +8,8 @@ namespace QuanLySinhVien
     {
         private int currentPage = 1;
         private int pageSize = 20;
-        private int totalRecords = 0;
         private string searchKeyword = "";
+        private List<Tbl_lophoc> _data = new List<Tbl_lophoc>();
 
         public QuanLyLopHocForm()
         {
@@ -21,26 +19,26 @@ namespace QuanLySinhVien
 
         private void LoadData()
         {
-            string where = string.IsNullOrEmpty(searchKeyword) ? "" :
-                string.Format(" WHERE CAST(MaID AS TEXT) LIKE '%{0}%' OR MaLop LIKE '%{0}%' OR TenLop LIKE '%{0}%'", searchKeyword);
+            _data = DatabaseHelper.GetAllLop(searchKeyword);
 
-            string countSql = "SELECT COUNT(*) FROM LopHoc" + where;
-            totalRecords = Convert.ToInt32(new SQLiteCommand(countSql,
-                DatabaseHelper.GetConnection()).ExecuteScalar());
-
-            int totalPages = (int)Math.Ceiling((double)totalRecords / pageSize);
-            if (totalPages == 0) totalPages = 1;
+            int totalRecords = _data.Count;
+            int totalPages = Math.Max(1, (int)Math.Ceiling((double)totalRecords / pageSize));
             if (currentPage > totalPages) currentPage = totalPages;
 
-            int offset = (currentPage - 1) * pageSize;
-            string sql = string.Format("SELECT MaID, MaLop, TenLop, GhiChu FROM LopHoc{0} LIMIT {1} OFFSET {2}",
-                where, pageSize, offset);
+            int skip = (currentPage - 1) * pageSize;
+            int take = Math.Min(pageSize, totalRecords - skip);
+            List<Tbl_lophoc> page = _data.GetRange(skip, take);
 
-            dgvLopHoc.DataSource = DatabaseHelper.ExecuteQuery(sql);
-            dgvLopHoc.Columns["MaID"].HeaderText = "Mã ID";
-            dgvLopHoc.Columns["MaLop"].HeaderText = "Mã lớp";
-            dgvLopHoc.Columns["TenLop"].HeaderText = "Tên lớp";
-            dgvLopHoc.Columns["GhiChu"].HeaderText = "Ghi chú";
+            dgvLopHoc.DataSource = null;
+            dgvLopHoc.DataSource = page;
+
+            if (dgvLopHoc.Columns["Tbl_sinhviens"] != null)
+                dgvLopHoc.Columns["Tbl_sinhviens"].Visible = false;
+
+            dgvLopHoc.Columns["Id"].HeaderText = "Mã ID";
+            dgvLopHoc.Columns["Malop"].HeaderText = "Mã lớp";
+            dgvLopHoc.Columns["Tenlop"].HeaderText = "Tên lớp";
+            dgvLopHoc.Columns["Ghichu"].HeaderText = "Ghi chú";
 
             lblPage.Text = string.Format("Trang {0}/{1}  |  {2} bản ghi", currentPage, totalPages, totalRecords);
         }
@@ -56,55 +54,63 @@ namespace QuanLySinhVien
         private void dgvLopHoc_SelectionChanged(object sender, EventArgs e)
         {
             if (dgvLopHoc.CurrentRow == null) return;
-            var row = dgvLopHoc.CurrentRow;
-            txtMaID.Text = row.Cells["MaID"].Value.ToString();
-            txtMaLop.Text = row.Cells["MaLop"].Value.ToString();
-            txtTenLop.Text = row.Cells["TenLop"].Value.ToString();
-            txtGhiChu.Text = row.Cells["GhiChu"].Value != DBNull.Value
-                ? row.Cells["GhiChu"].Value.ToString() : "";
+            DataGridViewRow row = dgvLopHoc.CurrentRow;
+            txtMaID.Text = row.Cells["Id"].Value != null ? row.Cells["Id"].Value.ToString() : "";
+            txtMaLop.Text = row.Cells["Malop"].Value != null ? row.Cells["Malop"].Value.ToString() : "";
+            txtTenLop.Text = row.Cells["Tenlop"].Value != null ? row.Cells["Tenlop"].Value.ToString() : "";
+            txtGhiChu.Text = row.Cells["Ghichu"].Value != null ? row.Cells["Ghichu"].Value.ToString() : "";
         }
 
         private void btnThem_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrEmpty(txtMaLop.Text) || string.IsNullOrEmpty(txtTenLop.Text))
-            { MessageBox.Show("Vui lòng nhập Mã lớp và Tên lớp!"); return; }
-
-            string sql = "INSERT INTO LopHoc (MaLop, TenLop, GhiChu) VALUES (@ml, @tl, @gc)";
-            var p = new SQLiteParameter[] {
-                new SQLiteParameter("@ml", txtMaLop.Text),
-                new SQLiteParameter("@tl", txtTenLop.Text),
-                new SQLiteParameter("@gc", txtGhiChu.Text)
-            };
-            DatabaseHelper.ExecuteNonQuery(sql, p);
-            MessageBox.Show("Thêm thành công!");
-            ClearForm(); LoadData();
+            {
+                MessageBox.Show("Vui lòng nhập Mã lớp và Tên lớp!");
+                return;
+            }
+            try
+            {
+                DatabaseHelper.ThemLop(txtMaLop.Text.Trim(), txtTenLop.Text.Trim(), txtGhiChu.Text.Trim());
+                MessageBox.Show("Thêm thành công!");
+                ClearForm();
+                LoadData();
+            }
+            catch (Exception ex) { MessageBox.Show("Lỗi: " + ex.Message); }
         }
 
         private void btnSua_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrEmpty(txtMaID.Text)) { MessageBox.Show("Chọn lớp cần sửa!"); return; }
-
-            string sql = "UPDATE LopHoc SET MaLop=@ml, TenLop=@tl, GhiChu=@gc WHERE MaID=@id";
-            var p = new SQLiteParameter[] {
-                new SQLiteParameter("@ml", txtMaLop.Text),
-                new SQLiteParameter("@tl", txtTenLop.Text),
-                new SQLiteParameter("@gc", txtGhiChu.Text),
-                new SQLiteParameter("@id", txtMaID.Text)
-            };
-            DatabaseHelper.ExecuteNonQuery(sql, p);
-            MessageBox.Show("Sửa thành công!");
-            LoadData();
+            if (string.IsNullOrEmpty(txtMaID.Text))
+            {
+                MessageBox.Show("Chọn lớp cần sửa!");
+                return;
+            }
+            try
+            {
+                DatabaseHelper.SuaLop(int.Parse(txtMaID.Text), txtMaLop.Text.Trim(), txtTenLop.Text.Trim(), txtGhiChu.Text.Trim());
+                MessageBox.Show("Sửa thành công!");
+                LoadData();
+            }
+            catch (Exception ex) { MessageBox.Show("Lỗi: " + ex.Message); }
         }
 
         private void btnXoa_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrEmpty(txtMaID.Text)) { MessageBox.Show("Chọn lớp cần xóa!"); return; }
+            if (string.IsNullOrEmpty(txtMaID.Text))
+            {
+                MessageBox.Show("Chọn lớp cần xóa!");
+                return;
+            }
             if (MessageBox.Show("Xác nhận xóa?", "Xóa", MessageBoxButtons.YesNo) == DialogResult.Yes)
             {
-                DatabaseHelper.ExecuteNonQuery("DELETE FROM LopHoc WHERE MaID=@id",
-                    new[] { new SQLiteParameter("@id", txtMaID.Text) });
-                MessageBox.Show("Xóa thành công!");
-                ClearForm(); LoadData();
+                try
+                {
+                    DatabaseHelper.XoaLop(int.Parse(txtMaID.Text));
+                    MessageBox.Show("Xóa thành công!");
+                    ClearForm();
+                    LoadData();
+                }
+                catch (Exception ex) { MessageBox.Show("Lỗi: " + ex.Message); }
             }
         }
 
@@ -126,21 +132,23 @@ namespace QuanLySinhVien
 
         private void btnXemSV_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrEmpty(txtMaLop.Text)) { MessageBox.Show("Chọn lớp trước!"); return; }
-            var frm = new QuanLySinhVienForm(txtMaLop.Text);
+            if (string.IsNullOrEmpty(txtMaLop.Text))
+            {
+                MessageBox.Show("Chọn lớp trước!");
+                return;
+            }
+            QuanLySinhVienForm frm = new QuanLySinhVienForm(txtMaLop.Text);
             frm.MdiParent = this.MdiParent;
             frm.WindowState = FormWindowState.Maximized;
             frm.Show();
         }
 
-        // Phân trang
         private void btnFirst_Click(object sender, EventArgs e) { currentPage = 1; LoadData(); }
         private void btnPrev_Click(object sender, EventArgs e) { if (currentPage > 1) { currentPage--; LoadData(); } }
         private void btnNext_Click(object sender, EventArgs e) { currentPage++; LoadData(); }
         private void btnLast_Click(object sender, EventArgs e)
         {
-            currentPage = (int)Math.Ceiling((double)totalRecords / pageSize);
-            if (currentPage < 1) currentPage = 1;
+            currentPage = Math.Max(1, (int)Math.Ceiling((double)_data.Count / pageSize));
             LoadData();
         }
     }
