@@ -1,81 +1,119 @@
 ﻿using System;
-using System.Data;
-using System.Data.SQLite;
-using System.IO;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace QuanLySinhVien
 {
     public static class DatabaseHelper
     {
-        private static string dbPath = Path.Combine(
-            AppDomain.CurrentDomain.BaseDirectory, "QuanLySinhVien.db");
+        public static string ConnectionString =
+            @"Data Source=.\SQLEXPRESS;Initial Catalog=qlsv;Integrated Security=True";
 
-        private static string ConnectionString
+        private static Qlsv GetDb()
         {
-            get { return "Data Source=" + dbPath + ";Version=3;"; }
+            return new Qlsv(ConnectionString);
         }
 
-        public static void InitDatabase()
+        // ===== LỚP HỌC =====
+        public static List<Tbl_lophoc> GetAllLop(string keyword = "")
         {
-            if (!File.Exists(dbPath))
-                SQLiteConnection.CreateFile(dbPath);
-
-            using (var conn = new SQLiteConnection(ConnectionString))
+            using (var db = GetDb())
             {
-                conn.Open();
-
-                string createLopHoc = @"
-                    CREATE TABLE IF NOT EXISTS LopHoc (
-                        MaID INTEGER PRIMARY KEY AUTOINCREMENT,
-                        MaLop TEXT NOT NULL,
-                        TenLop TEXT NOT NULL,
-                        GhiChu TEXT
-                    );";
-
-                string createSinhVien = @"
-                    CREATE TABLE IF NOT EXISTS SinhVien (
-                        MaSV INTEGER PRIMARY KEY AUTOINCREMENT,
-                        HoVaTen TEXT NOT NULL,
-                        NgaySinh TEXT,
-                        GioiTinh TEXT,
-                        MaLop TEXT,
-                        FOREIGN KEY(MaLop) REFERENCES LopHoc(MaLop)
-                    );";
-
-                new SQLiteCommand(createLopHoc, conn).ExecuteNonQuery();
-                new SQLiteCommand(createSinhVien, conn).ExecuteNonQuery();
+                var q = db.Tbl_lophoc.AsQueryable();
+                if (!string.IsNullOrWhiteSpace(keyword))
+                    q = q.Where(l => l.Id.ToString().Contains(keyword)
+                               || l.Malop.Contains(keyword)
+                               || l.Tenlop.Contains(keyword));
+                return q.OrderBy(l => l.Id).ToList();
             }
         }
 
-        public static SQLiteConnection GetConnection()
+        public static void ThemLop(string malop, string tenlop, string ghichu)
         {
-            var conn = new SQLiteConnection(ConnectionString);
-            conn.Open();
-            return conn;
-        }
-
-        public static DataTable ExecuteQuery(string sql, SQLiteParameter[] parameters = null)
-        {
-            using (var conn = GetConnection())
+            using (var db = GetDb())
             {
-                var cmd = new SQLiteCommand(sql, conn);
-                if (parameters != null)
-                    cmd.Parameters.AddRange(parameters);
-
-                var dt = new DataTable();
-                new SQLiteDataAdapter(cmd).Fill(dt);
-                return dt;
+                db.Tbl_lophoc.InsertOnSubmit(new Tbl_lophoc { Malop = malop, Tenlop = tenlop, Ghichu = ghichu });
+                db.SubmitChanges();
             }
         }
 
-        public static int ExecuteNonQuery(string sql, SQLiteParameter[] parameters = null)
+        public static void SuaLop(int id, string malop, string tenlop, string ghichu)
         {
-            using (var conn = GetConnection())
+            using (var db = GetDb())
             {
-                var cmd = new SQLiteCommand(sql, conn);
-                if (parameters != null)
-                    cmd.Parameters.AddRange(parameters);
-                return cmd.ExecuteNonQuery();
+                var lop = db.Tbl_lophoc.FirstOrDefault(l => l.Id == id);
+                if (lop == null) return;
+                lop.Malop = malop;
+                lop.Tenlop = tenlop;
+                lop.Ghichu = ghichu;
+                db.SubmitChanges();
+            }
+        }
+
+        public static void XoaLop(int id)
+        {
+            using (var db = GetDb())
+            {
+                var lop = db.Tbl_lophoc.FirstOrDefault(l => l.Id == id);
+                if (lop == null) return;
+                db.Tbl_lophoc.DeleteOnSubmit(lop);
+                db.SubmitChanges();
+            }
+        }
+
+        // ===== SINH VIÊN =====
+        public static List<Tbl_sinhviens> GetAllSV(string keyword = "", string filterMalop = "")
+        {
+            using (var db = GetDb())
+            {
+                var q = db.Tbl_sinhviens.AsQueryable();
+                if (!string.IsNullOrWhiteSpace(filterMalop))
+                    q = q.Where(s => s.Malop == filterMalop);
+                else if (!string.IsNullOrWhiteSpace(keyword))
+                    q = q.Where(s => s.Hoten.Contains(keyword)
+                               || s.Id.ToString().Contains(keyword)
+                               || s.Malop.Contains(keyword));
+                return q.OrderBy(s => s.Id).ToList();
+            }
+        }
+
+        public static void ThemSV(string hoten, string gioitinh, DateTime? ngaysinh, string malop)
+        {
+            using (var db = GetDb())
+            {
+                db.Tbl_sinhviens.InsertOnSubmit(new Tbl_sinhviens
+                {
+                    Hoten = hoten,
+                    Gioitinh = gioitinh,
+                    Ngaysinh = ngaysinh,
+                    Malop = malop
+                });
+                db.SubmitChanges();
+            }
+        }
+
+        public static void SuaSV(int id, string hoten, string gioitinh, DateTime? ngaysinh, string malop)
+        {
+            using (var db = GetDb())
+            {
+                var sv = db.Tbl_sinhviens.FirstOrDefault(s => s.Id == id);
+                if (sv == null) return;
+                sv.Hoten = hoten;
+                sv.Gioitinh = gioitinh;
+                sv.Ngaysinh = ngaysinh;
+                sv.Malop = malop;
+                db.SubmitChanges();
+            }
+        }
+
+        public static void XoaSV(int id)
+        {
+            using (var db = GetDb())
+            {
+                var sv = db.Tbl_sinhviens.FirstOrDefault(s => s.Id == id);
+                if (sv == null) return;
+                db.Tbl_sinhviens.DeleteOnSubmit(sv);
+                db.SubmitChanges();
             }
         }
     }
